@@ -1,15 +1,4 @@
 [[package]]
-name = "Fractol"
-version = "0.0.1"
-dependencies = [
- "image 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "vulkano 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "vulkano-shaders 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "vulkano-win 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "winit 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "adler32"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -278,6 +267,17 @@ dependencies = [
 name = "foreign-types-shared"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "fractol"
+version = "0.0.2"
+dependencies = [
+ "image 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vulkano 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vulkano-shaders 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vulkano-win 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winit 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "fuchsia-zircon"
