@@ -74,11 +74,11 @@ fn get_physical_device(instance : &Arc<Instance>) -> PhysicalDevice {
     println!("Please select the device you want to use :");
     let mut string = String::new();
     std::io::stdin().read_line(&mut string).unwrap();
-    return  PhysicalDevice::enumerate(instance).skip(string.trim().parse().unwrap()).next().expect("No device corresponds to this id.");
+    return  PhysicalDevice::enumerate(instance).skip(string.trim().parse().expect("Bad input !"))
+                                                .next().expect("No device corresponds to this id !");
 }
 
 fn main() {
-
 
     let instance = {
         let extensions = vulkano_win::required_extensions();
