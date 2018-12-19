@@ -253,6 +253,9 @@ fn main() {
             match ev {
                 Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => done = true,
                 Event::WindowEvent { event: WindowEvent::Resized(_), .. } => recreate_swapchain = true,
+                Event::WindowEvent { event: WindowEvent::KeyboardInput{device_id: DeviceId, input: KeyboardInput}, ..} => {
+                    println!("Received keyboard input ! {:?}\n", WindowEvent::KeyboardInput{device_id: DeviceId, input: KeyboardInput});
+                }
                 _ => ()
             }
         });
