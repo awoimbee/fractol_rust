@@ -13,6 +13,7 @@ use vulkano::image::SwapchainImage;
 use vulkano::instance::{Instance, PhysicalDevice};
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::viewport::Viewport;
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::swapchain::{AcquireError, PresentMode, SurfaceTransform, Swapchain, SwapchainCreationError};
 use vulkano::swapchain;
 use vulkano::sync::{GpuFuture, FlushError};
@@ -96,7 +97,8 @@ fn main() {
 // use vulkano::sync::GpuFuture;
 
 // Create the ring buffer.
-// let buffer = CpuBufferPool::upload(device.clone()); THIS IS THE EXACT SAME CODE AS IN THE EXEMPLE
+//let buffer = CpuBufferPool::upload(device.clone()); // THIS IS THE EXACT SAME CODE AS IN THE EXEMPLE
+    let uniform_buffer = CpuBufferPool::uniform_buffer(device.clone());
 
     let render_pass = Arc::new(single_pass_renderpass!(         //describes where the output of the graphics pipeline will go.
         device.clone(),
@@ -154,6 +156,10 @@ fn main() {
     // that, we store the submission of the previous frame here.
     let mut previous_frame_end = Box::new(sync::now(device.clone())) as Box<GpuFuture>;
 
+    let mut zoom = 1.;
+    let mut pos_x = -1.;
+    let mut pos_y = 0.;
+
     loop {
         // Calling this function polls various fences in order to determine what the GPU has
         // already processed, and frees the resources that are no longer needed.
@@ -181,6 +187,16 @@ fn main() {
             recreate_swapchain = false;
         }
 
+
+        let uniform_buffer_subbuffer = {
+            uniform_buffer.next([zoom, pos_x, pos_y]).unwrap()
+        };
+
+        let set = Arc::new(PersistentDescriptorSet::start(pipeline.clone(), 0)
+            .add_buffer(uniform_buffer_subbuffer).unwrap()
+            .build().unwrap()
+        );
+
         // Before we can draw on the output, we have to *acquire* an image from the swapchain. If
         // no image is available (which happens if you submit draw commands too quickly), then the
         // function will block.
@@ -203,7 +219,7 @@ fn main() {
         let command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family()).unwrap()
             .begin_render_pass(framebuffers[image_num].clone(), false, clear_values)
             .unwrap()
-            .draw(pipeline.clone(), &dynamic_state, vertex_buffer.clone(), (), ())
+            .draw(pipeline.clone(), &dynamic_state, vertex_buffer.clone(), set.clone(), ())
             .unwrap()
             .end_render_pass()
             .unwrap()
@@ -295,8 +311,15 @@ layout(location = 0) in vec2 pos;
 
 layout(location = 0) out vec4 f_color;
 
+layout(binding = 0) uniform Data {
+    vec3 zoom_pos;
+} uniforms;
+
 void main() {
-    vec2 c = pos * 2;
+    vec2 move = vec2(uniforms.zoom_pos[1], uniforms.zoom_pos[2]);
+    float zoom = uniforms.zoom_pos[0];
+    vec2 c = (pos * 2 * zoom) + move;
+    c = pos;
     vec2 z = c;
 
     float i;
@@ -309,7 +332,6 @@ void main() {
         if((z.x * z.x + z.y * z.y) > 50.0)
             break;
     }
-
     f_color = vec4(vec3(i), 1.0);
 }"
     }
