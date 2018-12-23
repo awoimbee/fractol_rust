@@ -156,7 +156,7 @@ fn main() {
     // that, we store the submission of the previous frame here.
     let mut previous_frame_end = Box::new(sync::now(device.clone())) as Box<GpuFuture>;
 
-    let mut zoom = 1.;
+    let mut zoom = 0.5;
     let mut pos_x = -1.;
     let mut pos_y = 0.;
 
@@ -189,7 +189,12 @@ fn main() {
 
 
         let uniform_buffer_subbuffer = {
-            uniform_buffer.next([zoom, pos_x, pos_y]).unwrap()
+            uniform_buffer.next(
+                EnvUniform {
+                    zoom: zoom,
+                    position_x: pos_x,
+                    position_y: pos_y,
+                }).unwrap()
         };
 
         let set = Arc::new(PersistentDescriptorSet::start(pipeline.clone(), 0)
@@ -253,8 +258,20 @@ fn main() {
             match ev {
                 Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => done = true,
                 Event::WindowEvent { event: WindowEvent::Resized(_), .. } => recreate_swapchain = true,
-                Event::WindowEvent { event: WindowEvent::KeyboardInput{device_id: DeviceId, input: KeyboardInput}, ..} => {
-                    println!("Received keyboard input ! {:?}\n", WindowEvent::KeyboardInput{device_id: DeviceId, input: KeyboardInput});
+                Event::WindowEvent { event: WindowEvent::KeyboardInput{input, ..}, ..} => {
+                    let key = input.virtual_keycode.unwrap();
+                    if input.state == winit::ElementState::Pressed {
+                        println!("pressed -> {:?}", input);
+                        match key {
+                            winit::VirtualKeyCode::W => zoom /= 1.25,
+                            winit::VirtualKeyCode::S => zoom *= 1.25,
+                            winit::VirtualKeyCode::Left => pos_x -= 1. * zoom,
+                            winit::VirtualKeyCode::Right => pos_x += 1. * zoom,
+                            winit::VirtualKeyCode::Up => pos_y -= 1. * zoom,
+                            winit::VirtualKeyCode::Down => pos_y += 1. * zoom,
+                            _ => ()
+                        }
+                    }
                 }
                 _ => ()
             }
@@ -287,6 +304,13 @@ fn window_size_dependent_setup(
     }).collect::<Vec<_>>()
 }
 
+#[derive(Clone)]
+struct EnvUniform {
+    zoom: f32,
+    position_x: f32,
+    position_y: f32,
+}
+
 mod vs {
     vulkano_shaders::shader!{
         ty: "vertex",
@@ -294,12 +318,19 @@ mod vs {
 #version 450
 
 layout(location = 0) in vec2 position;
+layout(binding = 0) uniform Data {
+    float zoom;
+    float pos_x;
+    float pos_y;
+} uniforms;
 
 layout(location = 0) out vec2 pos;
 
 void main() {
     gl_Position = vec4(position, 0.0, 1.0);
-    pos = position;
+    pos = position * uniforms.zoom;
+    pos.x += uniforms.pos_x;
+    pos.y += uniforms.pos_y;
 }"
     }
 }
@@ -314,19 +345,12 @@ layout(location = 0) in vec2 pos;
 
 layout(location = 0) out vec4 f_color;
 
-layout(binding = 0) uniform Data {
-    vec3 zoom_pos;
-} uniforms;
-
 void main() {
-    vec2 move = vec2(uniforms.zoom_pos[1], uniforms.zoom_pos[2]);
-    float zoom = uniforms.zoom_pos[0];
-    vec2 c = (pos * 2 * zoom) + move;
-    c = pos;
+    vec2 c = pos;
     vec2 z = c;
 
     float i;
-    for(i = 0; i < 1.0; i += 0.05) {
+    for(i = 0; i < 0.8; i += 0.01) {
         z = vec2(
             z.x * z.x - z.y * z.y + c.x,
             z.y * z.x + z.x * z.y + c.y
