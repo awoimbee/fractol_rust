@@ -89,15 +89,6 @@ fn main() {
         ].iter().cloned()).unwrap()
     };
 
-// WHY DOES THIS NOT FUCKING WORK WTF FDGSEHIJKUVDHJKSBBVDJKL
-// FUUUUUUUUUUUUUUCK https://docs.rs/vulkano/0.10.0/vulkano/buffer/cpu_pool/struct.CpuBufferPool.html
-// use vulkano::buffer::CpuBufferPool;
-// use vulkano::command_buffer::AutoCommandBufferBuilder;
-// use vulkano::command_buffer::CommandBuffer;
-// use vulkano::sync::GpuFuture;
-
-// Create the ring buffer.
-//let buffer = CpuBufferPool::upload(device.clone()); // THIS IS THE EXACT SAME CODE AS IN THE EXEMPLE
     let uniform_buffer = CpuBufferPool::uniform_buffer(device.clone());
 
     let render_pass = Arc::new(single_pass_renderpass!(         //describes where the output of the graphics pipeline will go.
@@ -138,7 +129,6 @@ fn main() {
         .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
         .build(device.clone())
         .unwrap());
-
 
     let mut dynamic_state = DynamicState { line_width: None, viewports: None, scissors: None };
 
@@ -183,10 +173,8 @@ fn main() {
             // Because framebuffers contains an Arc on the old swapchain, we need to
             // recreate framebuffers as well.
             framebuffers = window_size_dependent_setup(&new_images, render_pass.clone(), &mut dynamic_state);
-
             recreate_swapchain = false;
         }
-
 
         let uniform_buffer_subbuffer = {
             uniform_buffer.next(
@@ -345,21 +333,60 @@ layout(location = 0) in vec2 pos;
 
 layout(location = 0) out vec4 f_color;
 
+float squared_mod(vec2 vec)
+{
+    return (vec.x * vec.x + vec.y * vec.y);
+}
+
+vec2 calc_d_inpc(vec2 d_inpc, vec2 z)
+{
+    d_inpc = d_inpc * 2;
+    d_inpc = vec2(
+        d_inpc.x * z.x - d_inpc.y * z.y,
+        d_inpc.y * z.x + d_inpc.x * z.y
+    );
+    return (d_inpc);
+}
+
 void main() {
+    float dc = 0.0001;
     vec2 c = pos;
     vec2 z = c;
+    vec2 d_inpc = vec2(1, 0);
+    vec2 dd_inpc = vec2(dc, 0);
+    float sqrmod_z;
 
     float i;
-    for(i = 0; i < 0.8; i += 0.01) {
+    for(i = 0; i < 1.; i += 0.01) {
+        d_inpc = calc_d_inpc(d_inpc, z);
+        dd_inpc = calc_d_inpc(dd_inpc, z) + vec2(dc, 0);
         z = vec2(
             z.x * z.x - z.y * z.y + c.x,
             z.y * z.x + z.x * z.y + c.y
         );
-
-        if((z.x * z.x + z.y * z.y) > 50.0)
-            break;
+        if (squared_mod(d_inpc) < 0.0001)
+        {
+            i = 1.;
+			break ;
+		}
+        if (squared_mod(z) > 500)
+			break ;
     }
-    f_color = vec4(vec3(i), 1.0);
+
+    float color;
+    color = 0.;
+	if (i < 0.99)
+	{
+		z = z / dd_inpc;
+        z = z / abs(z);
+        z.x = (z.x * 0.7071067811865475 + z.y * 0.7071067811865475 + 1.5) / 2.5;
+        if (z.x < 0)
+            z.x = 0;
+        color = z.x;
+        // color=1.;
+	}
+
+    f_color = vec4(vec3(color), 1.0);
 }"
     }
 }
