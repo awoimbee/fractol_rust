@@ -348,6 +348,18 @@ vec2 calc_d_inpc(vec2 d_inpc, vec2 z)
     return (d_inpc);
 }
 
+vec2	c_div(vec2 c, vec2 divi)
+{
+	float	re;
+
+	re = c.x;
+	c.x = ((c.x * divi.x) + (c.y * divi.y))
+			/ ((divi.x * divi.x) + (divi.y * divi.y));
+	c.y = ((c.y * divi.x) - (re * divi.y))
+			/ ((divi.x * divi.x) + (divi.y * divi.y));
+	return (c);
+}
+
 void main() {
     float dc = 0.0001;
     vec2 c = pos;
@@ -377,8 +389,8 @@ void main() {
     color = 0.;
 	if (i < 0.99)
 	{
-		z = z / dd_inpc;
-        z = z / abs(z);
+        z = c_div(z, dd_inpc);
+        z = c_div(z, abs(z));
         z.x = (z.x * 0.7071067811865475 + z.y * 0.7071067811865475 + 1.5) / 2.5;
         if (z.x < 0)
             z.x = 0;
