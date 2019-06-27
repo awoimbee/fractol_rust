@@ -1,5 +1,5 @@
 [package]
-name = "fractol"
+name = "fractol_rust"
 version = "0.0.2"
 authors = ["Arthur <awoimbee@student.42.fr>"]
 edition = "2018"

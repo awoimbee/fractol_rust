@@ -26,6 +26,9 @@ use winit::{EventsLoop, Window, WindowBuilder, Event, WindowEvent};
 use std::sync::Arc;
 
 fn main() {
+
+    println!("Use W/S to zoom/unzoom and the arrow keys to move");
+
     let instance = {
         let extensions = vulkano_win::required_extensions();
         Instance::new(None, &extensions, None).unwrap()
@@ -48,7 +51,7 @@ fn main() {
         [(queue_family, 0.5)].iter().cloned()).unwrap();
 
 
-    let queue = queues.next().unwrap();         //we use only one queue, so we just retrieve the first
+    let queue = queues.next().unwrap(); // we use only one queue, so we just retrieve the first
 
     let (mut swapchain, images) = {
         let caps = surface.capabilities(physical).unwrap();
@@ -91,28 +94,23 @@ fn main() {
 
     let uniform_buffer = CpuBufferPool::uniform_buffer(device.clone());
 
-    let render_pass = Arc::new(single_pass_renderpass!(         //describes where the output of the graphics pipeline will go.
+    let render_pass = Arc::new(single_pass_renderpass!( // describes where the output of the graphics pipeline will go
         device.clone(),
         attachments: {
-            // `color` is a custom name we give to the first and only attachment.
+            // custom name we give to the first and only attachment
             color: {
-                // `load: Clear` means that we ask the GPU to clear the content of this
-                // attachment at the start of the drawing.
+                // clear the content of this attachment at the start of the drawing
                 load: Clear,
-                // `store: Store` means that we ask the GPU to store the output of the draw
-                // in the actual image. We could also ask it to discard the result.
+                // store the output of the draw in the actual image
                 store: Store,
-                // `format: <ty>` indicates the type of the format of the image. This has to
-                // be one of the types of the `vulkano::format` module (or alternatively one
-                // of your structs that implements the `FormatDesc` trait). Here we use the
-                // same format as the swapchain.
+                // set the format of the image as the same as the swapchain
                 format: swapchain.format(),
                 samples: 1,
             }
         },
         pass: {
             color: [color],
-            // No depth-stencil attachment is indicated with empty brackets.
+            // No depth-stencil attachment -> empty brackets
             depth_stencil: {}
         }
     ).unwrap());
@@ -123,7 +121,7 @@ fn main() {
     let pipeline = Arc::new(GraphicsPipeline::start()
         .vertex_input_single_buffer()
         .vertex_shader(vs.main_entry_point(), ())
-        .triangle_list()                            // The content of the vertex buffer describes a list of triangles.
+        .triangle_list()
         .viewports_dynamic_scissors_irrelevant(1)   // Use a resizable viewport set to draw over the entire window
         .fragment_shader(fs.main_entry_point(), ())
         .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
@@ -134,18 +132,12 @@ fn main() {
 
     let mut framebuffers = window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
 
-    // Initialization is finally finished!
+    // Initialization is finally over!
 
     let mut recreate_swapchain = false;
-
-    // In the loop below we are going to submit commands to the GPU. Submitting a command produces
-    // an object that implements the `GpuFuture` trait, which holds the resources for as long as
-    // they are in use by the GPU.
-    //
-    // Destroying the `GpuFuture` blocks until the GPU is finished executing it. In order to avoid
-    // that, we store the submission of the previous frame here.
     let mut previous_frame_end = Box::new(sync::now(device.clone())) as Box<GpuFuture>;
 
+    // variables needed to draw the fractal
     let mut zoom = 0.5;
     let mut pos_x = -1.;
     let mut pos_y = 0.;
@@ -190,13 +182,9 @@ fn main() {
             .build().unwrap()
         );
 
-        // Before we can draw on the output, we have to *acquire* an image from the swapchain. If
-        // no image is available (which happens if you submit draw commands too quickly), then the
-        // function will block.
-        // This operation returns the index of the image that we are allowed to draw upon.
-        //
-        // This function can block if no image is available. The parameter is an optional timeout
-        // after which the function call will return an error.
+        // Before we can draw on the output, we have to *acquire* an image from the swapchain
+        //  the function will block if too many requests are sent,
+        //  the optional param is a timer after which the function returns an error
         let (image_num, acquire_future) = match swapchain::acquire_next_image(swapchain.clone(), None) {
             Ok(r) => r,
             Err(AcquireError::OutOfDate) => {
@@ -206,7 +194,7 @@ fn main() {
             Err(err) => panic!("{:?}", err)
         };
 
-        // Specify the color to clear the framebuffer with
+        // color to clear the framebuffer with
         let clear_values = vec!([0.0, 0.0, 0.0, 1.0].into());
 
         let command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family()).unwrap()
@@ -249,14 +237,15 @@ fn main() {
                 Event::WindowEvent { event: WindowEvent::KeyboardInput{input, ..}, ..} => {
                     let key = input.virtual_keycode.unwrap();
                     if input.state == winit::ElementState::Pressed {
-                        println!("pressed -> {:?}", input);
+                        println!("pressed -> {:?}", key);
                         match key {
                             winit::VirtualKeyCode::W => zoom /= 1.25,
-                            winit::VirtualKeyCode::S => zoom *= 1.25,
-                            winit::VirtualKeyCode::Left => pos_x -= 1. * zoom,
-                            winit::VirtualKeyCode::Right => pos_x += 1. * zoom,
-                            winit::VirtualKeyCode::Up => pos_y -= 1. * zoom,
-                            winit::VirtualKeyCode::Down => pos_y += 1. * zoom,
+                            winit::VirtualKeyCode::S => if zoom < 2. {zoom *= 1.25},
+                            winit::VirtualKeyCode::Left => pos_x -= 0.25 * zoom,
+                            winit::VirtualKeyCode::Right => pos_x += 0.25 * zoom,
+                            winit::VirtualKeyCode::Up => pos_y -= 0.25 * zoom,
+                            winit::VirtualKeyCode::Down => pos_y += 0.25 * zoom,
+                            winit::VirtualKeyCode::Escape => done = true,
                             _ => ()
                         }
                     }
