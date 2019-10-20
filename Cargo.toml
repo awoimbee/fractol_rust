@@ -1,12 +1,12 @@
 [package]
-name = "fractol_rust"
-version = "0.0.2"
-authors = ["Arthur <awoimbee@student.42.fr>"]
+name = "rustcraft"
+version = "0.0.1"
+authors = ["Arthur W. <arthur.woimbee@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-vulkano-win = "0.11"
-winit = "0.18"
-vulkano = "0.11"
-vulkano-shaders = "0.11"
-image = "0.19"
+vulkano-shaders = "0.14.0"
+vulkano-win =     "0.14.0"
+vulkano =         "0.14.0"
+bitfield =        "0.13.2"
+winit =           "0.19.3"
