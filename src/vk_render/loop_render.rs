@@ -24,8 +24,10 @@ impl Graphics {
                 self.recreate_swapchain.store(false, Relaxed);
             }
 
+            let uniform_read_window = *uniform.lock().unwrap();
             let uniform_buffer_subbuffer =
-                { self.uniform_buffer.next(*uniform.lock().unwrap()).unwrap() };
+                { self.uniform_buffer.next(uniform_read_window).unwrap() };
+            drop(uniform_read_window);
 
             let set = Arc::new(
                 PersistentDescriptorSet::start(self.pipeline.clone(), 0)
@@ -61,7 +63,7 @@ impl Graphics {
             .draw(
                 self.pipeline.clone(),
                 &self.dynamic_state,
-                vec![self.vertex_buffer.clone()],
+                vec![self.vertex_buffer.clone()], // WHY ??
                 set.clone(),
                 (),
             )

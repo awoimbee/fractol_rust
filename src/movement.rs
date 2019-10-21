@@ -5,16 +5,17 @@ use std::{thread, time};
 use crate::input::*;
 use crate::vk_render::*;
 
+const PHYSICS_TIME: u64 = 5; // 5ms <=> 200Hz
+
 pub fn game_loop(exit: Arc<AtomicBool>, p_keys: Arc<PKeys>, uniform: Arc<Mutex<Uniform>>) {
-    let sleep_dur = time::Duration::from_millis(16);
     let mut zoom = 0.5;
     let mut pos_x = -1.;
     let mut pos_y = 0.;
     loop {
+        let now = time::Instant::now();
         if exit.load(Relaxed) {
             return;
         }
-
         if p_keys.contains(BTKey::W) {
             zoom /= 1.10;
         }
@@ -40,6 +41,13 @@ pub fn game_loop(exit: Arc<AtomicBool>, p_keys: Arc<PKeys>, uniform: Arc<Mutex<U
         u.position_y = pos_y;
         drop(u); // otherwise mutex is not unlocked
 
+        let sleep_dur = match time::Duration::from_millis(PHYSICS_TIME).checked_sub(now.elapsed()) {
+            Some(t) => t,
+            None => {
+                println!("Physics can't keep up !");
+                time::Duration::from_secs(0)
+            }
+        };
         thread::sleep(sleep_dur);
     }
 }
