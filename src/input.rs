@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering::*};
 use std::sync::Arc;
-use winit::VirtualKeyCode as KeyCode;
-use winit::{ControlFlow, Event, WindowEvent};
+use winit::event::{Event, VirtualKeyCode as KeyCode, WindowEvent};
+use winit::event_loop::ControlFlow;
 
 pub enum BTKey {
     UP = 0b1,
@@ -37,13 +37,13 @@ impl PKeys {
     }
 }
 
-pub fn input_loop(
-    mut events_loop: winit::EventsLoop,
+pub fn input_loop<T>(
+    events_loop: winit::event_loop::EventLoop<T>,
     recreate_swapchain: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
     p_keys: Arc<PKeys>,
 ) {
-    events_loop.run_forever(|ev| {
+    events_loop.run(move |ev, _win, ctrl_flow| {
         match ev {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
@@ -60,8 +60,8 @@ pub fn input_loop(
             } => {
                 let key = input.virtual_keycode.unwrap();
                 let fn_ptr = match input.state {
-                    winit::ElementState::Pressed => PKeys::add,
-                    winit::ElementState::Released => PKeys::rm,
+                    winit::event::ElementState::Pressed => PKeys::add,
+                    winit::event::ElementState::Released => PKeys::rm,
                 };
 
                 match key {
@@ -78,9 +78,9 @@ pub fn input_loop(
             _ => (),
         };
         if exit.load(Relaxed) {
-            ControlFlow::Break
+            *ctrl_flow = ControlFlow::Exit;
         } else {
-            ControlFlow::Continue
+            *ctrl_flow = ControlFlow::Wait;
         }
     });
 }

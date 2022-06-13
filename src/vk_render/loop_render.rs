@@ -1,7 +1,10 @@
 use crate::vk_render::*;
 use std::sync::{Arc, Mutex};
+use vulkano::buffer::TypedBufferAccess;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
-use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
+use vulkano::descriptor_set::persistent::PersistentDescriptorSet;
+use vulkano::descriptor_set::WriteDescriptorSet;
+use vulkano::pipeline::Pipeline;
 use vulkano::swapchain;
 use vulkano::swapchain::AcquireError;
 use vulkano::sync;
@@ -25,22 +28,21 @@ impl Graphics {
             }
 
             let uniform_read_window = *uniform.lock().unwrap();
+
             let uniform_buffer_subbuffer =
                 { self.uniform_buffer.next(uniform_read_window).unwrap() };
-            drop(uniform_read_window);
+            // drop(uniform_read_window);
 
-            let set = Arc::new(
-                PersistentDescriptorSet::start(self.pipeline.clone(), 0)
-                    .add_buffer(uniform_buffer_subbuffer)
-                    .unwrap()
-                    .build()
-                    .unwrap(),
-            );
+            let _set = PersistentDescriptorSet::new(
+                self.pipeline.layout().set_layouts().get(0).unwrap().clone(),
+                [WriteDescriptorSet::buffer(0, uniform_buffer_subbuffer)],
+            )
+            .unwrap();
 
             // Before we can draw on the output, we have to *acquire* an image from the swapchain
             //  the function will block if too many requests are sent,
             //  the optional param is a timer after which the function returns an error
-            let (image_num, acquire_future) =
+            let (image_num, _suboptimal, acquire_future) =
                 match swapchain::acquire_next_image(self.swapchain.clone(), None) {
                     Ok(r) => r,
                     Err(AcquireError::OutOfDate) => {
@@ -53,25 +55,25 @@ impl Graphics {
             // color to clear the framebuffer with
             let clear_values = vec![[0.0, 0.0, 0.0, 1.0].into()];
 
-            let command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(
+            let mut command_buffer_builder = AutoCommandBufferBuilder::primary(
                 self.device.clone(),
                 self.queue.family(),
+                vulkano::command_buffer::CommandBufferUsage::OneTimeSubmit,
             )
-            .unwrap()
-            .begin_render_pass(self.framebuffers[image_num].clone(), false, clear_values)
-            .unwrap()
-            .draw(
-                self.pipeline.clone(),
-                &self.dynamic_state,
-                vec![self.vertex_buffer.clone()], // WHY ??
-                set.clone(),
-                (),
-            )
-            .unwrap()
-            .end_render_pass()
-            .unwrap()
-            .build()
             .unwrap();
+            command_buffer_builder
+                .begin_render_pass(
+                    self.framebuffers[image_num].clone(),
+                    vulkano::command_buffer::SubpassContents::Inline,
+                    clear_values,
+                )
+                .unwrap()
+                .draw(self.vertex_buffer.len() as u32, 1, 0, 0)
+                .unwrap()
+                .end_render_pass()
+                .unwrap();
+
+            let command_buffer = command_buffer_builder.build().unwrap();
 
             let future = previous_frame_end
                 .join(acquire_future)

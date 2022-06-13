@@ -1,9 +1,9 @@
-extern crate vulkano_shaders;
-extern crate vulkano_win;
-#[macro_use]
-extern crate vulkano;
-extern crate bitfield;
-extern crate winit;
+// extern crate vulkano_shaders;
+// extern crate vulkano_win;
+// #[macro_use]
+// extern crate vulkano;
+// extern crate bitfield;
+// extern crate winit;
 
 mod input;
 mod movement;
@@ -16,7 +16,7 @@ use input::*;
 use movement::game_loop;
 
 fn main() {
-    let events_loop = winit::EventsLoop::new();
+    let events_loop = winit::event_loop::EventLoop::new();
     let pressed_keys = Arc::new(PKeys::new());
 
     let mut vk = vk_render::Graphics::new(&events_loop);
@@ -38,10 +38,10 @@ fn main() {
 
     let e = exit.clone();
     let pk = pressed_keys.clone();
-    let u = uniform.clone();
+    let u = uniform;
     thread::spawn(move || game_loop(e, pk, u));
 
-    input::input_loop(events_loop, rs, exit.clone(), pressed_keys.clone());
+    input::input_loop(events_loop, rs, exit, pressed_keys);
 }
 
 mod vs {
